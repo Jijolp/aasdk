@@ -46,7 +46,7 @@ protected:
 
     TCPWrapperMock tcpWrapperMock_;
     TCPEndpointPromiseHandlerMock promiseHandlerMock_;
-    boost::asio::io_service ioService_;
+    boost::asio::io_context ioService_;
     ITCPEndpoint::SocketPointer socket_;
     ITCPEndpoint::Promise::Pointer promise_;
 };

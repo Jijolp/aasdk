@@ -52,7 +52,7 @@ protected:
                           std::bind(&SendPromiseHandlerMock::onReject, &sendPromiseHandlerMock_, std::placeholders::_1));
     }
 
-    boost::asio::io_service ioService_;
+    boost::asio::io_context ioService_;
     MessageInStreamMock messageInStreamMock_;
     IMessageInStream::Pointer messageInStream_;
     MessageOutStreamMock messageOutStreamMock_;

@@ -40,23 +40,23 @@ public:
     typedef std::function<void(ErrorArgumentType)> RejectHandler;
     typedef std::shared_ptr<Promise> Pointer;
 
-    static Pointer defer(boost::asio::io_service& ioService)
+    static Pointer defer(boost::asio::io_context& ioService)
     {
         return std::make_shared<Promise>(ioService);
     }
 
-    static Pointer defer(boost::asio::io_service::strand& strand)
+    static Pointer defer(boost::asio::io_context::strand& strand)
     {
         return std::make_shared<Promise>(strand);
     }
 
-    Promise(boost::asio::io_service& ioService)
+    Promise(boost::asio::io_context& ioService)
         : ioContextWrapper_(ioService)
     {
 
     }
 
-    Promise(boost::asio::io_service::strand& strand)
+    Promise(boost::asio::io_context::strand& strand)
         : ioContextWrapper_(strand)
     {
 
@@ -121,23 +121,23 @@ public:
     typedef std::function<void(ErrorArgumentType)> RejectHandler;
     typedef std::shared_ptr<Promise> Pointer;
 
-    static Pointer defer(boost::asio::io_service& ioService)
+    static Pointer defer(boost::asio::io_context& ioService)
     {
         return std::make_shared<Promise>(ioService);
     }
 
-    static Pointer defer(boost::asio::io_service::strand& strand)
+    static Pointer defer(boost::asio::io_context::strand& strand)
     {
         return std::make_shared<Promise>(strand);
     }
 
-    Promise(boost::asio::io_service& ioService)
+    Promise(boost::asio::io_context& ioService)
         : ioContextWrapper_(ioService)
     {
 
     }
 
-    Promise(boost::asio::io_service::strand& strand)
+    Promise(boost::asio::io_context::strand& strand)
         : ioContextWrapper_(strand)
     {
 
@@ -201,23 +201,23 @@ public:
     typedef std::function<void()> RejectHandler;
     typedef std::shared_ptr<Promise> Pointer;
 
-    static Pointer defer(boost::asio::io_service& ioService)
+    static Pointer defer(boost::asio::io_context& ioService)
     {
         return std::make_shared<Promise>(ioService);
     }
 
-    static Pointer defer(boost::asio::io_service::strand& strand)
+    static Pointer defer(boost::asio::io_context::strand& strand)
     {
         return std::make_shared<Promise>(strand);
     }
 
-    Promise(boost::asio::io_service& ioService)
+    Promise(boost::asio::io_context& ioService)
         : ioContextWrapper_(ioService)
     {
 
     }
 
-    Promise(boost::asio::io_service::strand& strand)
+    Promise(boost::asio::io_context::strand& strand)
         : ioContextWrapper_(strand)
     {
 
@@ -282,23 +282,23 @@ public:
     typedef std::function<void(void)> RejectHandler;
     typedef std::shared_ptr<Promise> Pointer;
 
-    static Pointer defer(boost::asio::io_service& ioService)
+    static Pointer defer(boost::asio::io_context& ioService)
     {
         return std::make_shared<Promise>(ioService);
     }
 
-    static Pointer defer(boost::asio::io_service::strand& strand)
+    static Pointer defer(boost::asio::io_context::strand& strand)
     {
         return std::make_shared<Promise>(strand);
     }
 
-    Promise(boost::asio::io_service& ioService)
+    Promise(boost::asio::io_context& ioService)
         : ioContextWrapper_(ioService)
     {
 
     }
 
-    Promise(boost::asio::io_service::strand& strand)
+    Promise(boost::asio::io_context::strand& strand)
         : ioContextWrapper_(strand)
     {
 

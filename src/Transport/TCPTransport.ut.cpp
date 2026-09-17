@@ -51,7 +51,7 @@ protected:
                            std::bind(&TransportSendPromiseHandlerMock::onReject, &sendPromiseHandlerMock_, std::placeholders::_1));
     }
 
-    boost::asio::io_service ioService_;
+    boost::asio::io_context ioService_;
     tcp::ut::TCPEndpointMock tcpEndpointMock_;
     TransportReceivePromiseHandlerMock receivePromiseHandlerMock_;
     ITransport::ReceivePromise::Pointer receivePromise_;

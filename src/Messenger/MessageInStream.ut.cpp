@@ -49,7 +49,7 @@ protected:
                              std::bind(&ReceivePromiseHandlerMock::onReject, &receivePromiseHandlerMock_, std::placeholders::_1));
     }
 
-    boost::asio::io_service ioService_;
+    boost::asio::io_context ioService_;
     transport::ut::TransportMock transportMock_;
     transport::ITransport::Pointer transport_;
     CryptorMock cryptorMock_;

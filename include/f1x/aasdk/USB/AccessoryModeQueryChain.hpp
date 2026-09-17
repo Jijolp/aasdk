@@ -35,7 +35,7 @@ class AccessoryModeQueryChain: public IAccessoryModeQueryChain, public std::enab
 {
 public:
     AccessoryModeQueryChain(IUSBWrapper& usbWrapper,
-                            boost::asio::io_service& ioService,
+                            boost::asio::io_context& ioService,
                             IAccessoryModeQueryFactory& queryFactory);
 
     void start(DeviceHandle handle, Promise::Pointer promise) override;
@@ -56,7 +56,7 @@ private:
     void startQueryHandler(IUSBEndpoint::Pointer usbEndpoint);
     
     IUSBWrapper& usbWrapper_;
-    boost::asio::io_service::strand strand_;
+    boost::asio::io_context::strand strand_;
     IAccessoryModeQueryFactory& queryFactory_;
     DeviceHandle handle_;    
     Promise::Pointer promise_;

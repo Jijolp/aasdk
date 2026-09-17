@@ -36,7 +36,7 @@ class USBEndpoint: public IUSBEndpoint,
         boost::noncopyable
 {
 public:
-    USBEndpoint(IUSBWrapper& usbWrapper, boost::asio::io_service& ioService, DeviceHandle handle, uint8_t endpointAddress = 0x00);
+    USBEndpoint(IUSBWrapper& usbWrapper, boost::asio::io_context& ioService, DeviceHandle handle, uint8_t endpointAddress = 0x00);
 
     void controlTransfer(common::DataBuffer buffer, uint32_t timeout, Promise::Pointer promise) override;
     void bulkTransfer(common::DataBuffer buffer, uint32_t timeout, Promise::Pointer promise) override;
@@ -53,7 +53,7 @@ private:
     static void transferHandler(libusb_transfer *transfer);
 
     IUSBWrapper& usbWrapper_;
-    boost::asio::io_service::strand strand_;
+    boost::asio::io_context::strand strand_;
     DeviceHandle handle_;
     uint8_t endpointAddress_;
     Transfers transfers_;

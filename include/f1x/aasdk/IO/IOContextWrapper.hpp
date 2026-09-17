@@ -32,19 +32,19 @@ class IOContextWrapper
 {
 public:
     IOContextWrapper();
-    explicit IOContextWrapper(boost::asio::io_service& ioService);
-    explicit IOContextWrapper(boost::asio::io_service::strand& strand);
+    explicit IOContextWrapper(boost::asio::io_context& ioService);
+    explicit IOContextWrapper(boost::asio::io_context::strand& strand);
 
     template<typename CompletionHandlerType>
     void post(CompletionHandlerType&& handler)
     {
         if(ioService_ != nullptr)
         {
-            ioService_->post(std::move(handler));
+            boost::asio::post(*ioService_, std::move(handler));
         }
         else if(strand_ != nullptr)
         {
-            strand_->post(std::move(handler));
+            boost::asio::post(*strand_, std::move(handler));
         }
     }
 
@@ -53,11 +53,11 @@ public:
     {
         if(ioService_ != nullptr)
         {
-            ioService_->dispatch(std::move(handler));
+            boost::asio::dispatch(*ioService_, std::move(handler));
         }
         else if(strand_ != nullptr)
         {
-            strand_->dispatch(std::move(handler));
+            boost::asio::dispatch(*strand_, std::move(handler));
         }
     }
 
@@ -65,8 +65,8 @@ public:
     bool isActive() const;
 
 private:
-    boost::asio::io_service* ioService_;
-    boost::asio::io_service::strand* strand_;
+    boost::asio::io_context* ioService_;
+    boost::asio::io_context::strand* strand_;
 };
 
 }

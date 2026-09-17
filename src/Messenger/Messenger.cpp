@@ -27,7 +27,7 @@ namespace aasdk
 namespace messenger
 {
 
-Messenger::Messenger(boost::asio::io_service& ioService, IMessageInStream::Pointer messageInStream, IMessageOutStream::Pointer messageOutStream)
+Messenger::Messenger(boost::asio::io_context& ioService, IMessageInStream::Pointer messageInStream, IMessageOutStream::Pointer messageOutStream)
     : receiveStrand_(ioService)
     , sendStrand_(ioService)
     , messageInStream_(std::move(messageInStream))
@@ -38,7 +38,7 @@ Messenger::Messenger(boost::asio::io_service& ioService, IMessageInStream::Point
 
 void Messenger::enqueueReceive(ChannelId channelId, ReceivePromise::Pointer promise)
 {
-    receiveStrand_.dispatch([this, self = this->shared_from_this(), channelId, promise = std::move(promise)]() mutable {
+    boost::asio::dispatch(receiveStrand_, [this, self = this->shared_from_this(), channelId, promise = std::move(promise)]() mutable {
         if(!channelReceiveMessageQueue_.empty(channelId))
         {
             promise->resolve(std::move(channelReceiveMessageQueue_.pop(channelId)));
@@ -60,7 +60,7 @@ void Messenger::enqueueReceive(ChannelId channelId, ReceivePromise::Pointer prom
 
 void Messenger::enqueueSend(Message::Pointer message, SendPromise::Pointer promise)
 {
-    sendStrand_.dispatch([this, self = this->shared_from_this(), message = std::move(message), promise = std::move(promise)]() mutable {
+    boost::asio::dispatch(sendStrand_, [this, self = this->shared_from_this(), message = std::move(message), promise = std::move(promise)]() mutable {
         channelSendPromiseQueue_.emplace_back(std::make_pair(std::move(message), std::move(promise)));
 
         if(channelSendPromiseQueue_.size() == 1)
@@ -133,7 +133,7 @@ void Messenger::rejectSendPromiseQueue(const error::Error& e)
 
 void Messenger::stop()
 {
-    receiveStrand_.dispatch([this, self = this->shared_from_this()]() {
+    boost::asio::dispatch(receiveStrand_, [this, self = this->shared_from_this()]() {
         channelReceiveMessageQueue_.clear();
     });
 }

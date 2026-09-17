@@ -32,14 +32,14 @@ IOContextWrapper::IOContextWrapper()
 
 }
 
-IOContextWrapper::IOContextWrapper(boost::asio::io_service& ioService)
+IOContextWrapper::IOContextWrapper(boost::asio::io_context& ioService)
     : ioService_(&ioService)
     , strand_(nullptr)
 {
 
 }
 
-IOContextWrapper::IOContextWrapper(boost::asio::io_service::strand& strand)
+IOContextWrapper::IOContextWrapper(boost::asio::io_context::strand& strand)
     : ioService_(nullptr)
     , strand_(&strand)
 {

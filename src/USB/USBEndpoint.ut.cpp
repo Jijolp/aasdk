@@ -48,7 +48,7 @@ protected:
     }
 
     USBWrapperMock usbWrapperMock_;
-    boost::asio::io_service ioService_;
+    boost::asio::io_context ioService_;
     USBWrapperMock::DummyDeviceHandle dummyDeviceHandle_;
     DeviceHandle deviceHandle_;
     USBEndpointPromiseHandlerMock promiseHandlerMock_;

@@ -28,7 +28,7 @@ namespace usb
 {
 
 AccessoryModeQueryChain::AccessoryModeQueryChain(IUSBWrapper& usbWrapper,
-                                                 boost::asio::io_service& ioService,
+                                                 boost::asio::io_context& ioService,
                                                  IAccessoryModeQueryFactory& queryFactory)
     : usbWrapper_(usbWrapper)
     , strand_(ioService)
@@ -39,7 +39,7 @@ AccessoryModeQueryChain::AccessoryModeQueryChain(IUSBWrapper& usbWrapper,
 
 void AccessoryModeQueryChain::start(DeviceHandle handle, Promise::Pointer promise)
 {   
-    strand_.dispatch([this, self = this->shared_from_this(), handle = std::move(handle), promise = std::move(promise)]() mutable {
+    boost::asio::dispatch(strand_, [this, self = this->shared_from_this(), handle = std::move(handle), promise = std::move(promise)]() mutable {
         if(promise_ != nullptr)
         {
             promise->reject(error::Error(error::ErrorCode::OPERATION_IN_PROGRESS));
@@ -58,7 +58,7 @@ void AccessoryModeQueryChain::start(DeviceHandle handle, Promise::Pointer promis
                 });
 
             this->startQuery(AccessoryModeQueryType::PROTOCOL_VERSION,
-                             std::make_shared<USBEndpoint>(usbWrapper_, strand_.get_io_service(), std::move(handle)),
+                             std::make_shared<USBEndpoint>(usbWrapper_, strand_.context(), std::move(handle)),
                              std::move(queryPromise));
         }
     });
@@ -66,7 +66,7 @@ void AccessoryModeQueryChain::start(DeviceHandle handle, Promise::Pointer promis
 
 void AccessoryModeQueryChain::cancel()
 {
-    strand_.dispatch([this, self = this->shared_from_this()]() {
+    boost::asio::dispatch(strand_, [this, self = this->shared_from_this()]() {
         if(activeQuery_ != nullptr)
         {
             activeQuery_->cancel();
