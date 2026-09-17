@@ -19,6 +19,7 @@
 #pragma once
 
 #include <f1x/aasdk/Common/Data.hpp>
+#include <boost/noncopyable.hpp>
 #include <f1x/aasdk/Transport/ITransport.hpp>
 #include <f1x/aasdk/Messenger/ICryptor.hpp>
 #include <f1x/aasdk/Messenger/IMessageOutStream.hpp>

@@ -19,6 +19,7 @@
 #pragma once
 
 #include <boost/asio.hpp>
+#include <boost/noncopyable.hpp>
 #include <list>
 #include <f1x/aasdk/USB/IUSBHub.hpp>
 #include <f1x/aasdk/USB/IAccessoryModeQueryChainFactory.hpp>

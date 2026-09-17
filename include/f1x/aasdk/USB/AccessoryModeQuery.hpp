@@ -19,6 +19,7 @@
 #pragma once
 
 #include <boost/asio.hpp>
+#include <boost/noncopyable.hpp>
 #include <libusb.h>
 #include <list>
 #include <f1x/aasdk/USB/IUSBEndpoint.hpp>

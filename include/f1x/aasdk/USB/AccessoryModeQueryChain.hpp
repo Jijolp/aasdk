@@ -19,6 +19,7 @@
 #pragma once
 
 #include <f1x/aasdk/USB/IUSBWrapper.hpp>
+#include <boost/noncopyable.hpp>
 #include <f1x/aasdk/USB/IAccessoryModeQueryFactory.hpp>
 #include <f1x/aasdk/USB/IAccessoryModeQueryChain.hpp>
 

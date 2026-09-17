@@ -21,6 +21,7 @@
 #include <list>
 #include <queue>
 #include <boost/asio.hpp>
+#include <boost/noncopyable.hpp>
 #include <f1x/aasdk/Transport/ITransport.hpp>
 #include <f1x/aasdk/Transport/DataSink.hpp>
 

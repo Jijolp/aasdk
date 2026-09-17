@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <memory>
 #include <boost/asio.hpp>
+#include <boost/noncopyable.hpp>
 #include <f1x/aasdk/USB/IUSBWrapper.hpp>
 #include <f1x/aasdk/USB/IUSBEndpoint.hpp>
 
