@@ -117,7 +117,6 @@ void ControlServiceChannel::sendNavigationFocusResponse(const proto::messages::N
 
 void ControlServiceChannel::sendPingRequest(const proto::messages::PingRequest& request, SendPromise::Pointer promise)
 {
-    AASDK_LOG(info) << "[ControlServiceChannel][debug] sending PING_REQUEST.";
     auto message(std::make_shared<messenger::Message>(channelId_, messenger::EncryptionType::PLAIN, messenger::MessageType::SPECIFIC));
     message->insertPayload(messenger::MessageId(proto::ids::ControlMessage::PING_REQUEST).getData());
     message->insertPayload(request);
@@ -138,8 +137,6 @@ void ControlServiceChannel::messageHandler(messenger::Message::Pointer message, 
 {
     messenger::MessageId messageId(message->getPayload());
     common::DataConstBuffer payload(message->getPayload(), messageId.getSizeOf());
-
-    AASDK_LOG(info) << "[ControlServiceChannel][debug] received control message id: " << messageId.getId();
 
     switch(messageId.getId())
     {
