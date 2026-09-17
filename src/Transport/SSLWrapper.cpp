@@ -40,7 +40,9 @@ SSLWrapper::SSLWrapper()
 
 SSLWrapper::~SSLWrapper()
 {
+#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
     FIPS_mode_set(0);
+#endif
     ENGINE_cleanup();
     CONF_modules_unload(1);
     EVP_cleanup();
