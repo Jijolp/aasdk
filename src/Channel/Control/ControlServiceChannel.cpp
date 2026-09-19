@@ -16,6 +16,8 @@
 *  along with aasdk. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <cstdio>
+#include <cstdlib>
 #include <boost/endian/conversion.hpp>
 #include <aasdk_proto/ControlMessageIdsEnum.pb.h>
 #include <f1x/aasdk/Version.hpp>
@@ -45,8 +47,29 @@ void ControlServiceChannel::sendVersionRequest(SendPromise::Pointer promise)
     message->insertPayload(messenger::MessageId(proto::ids::ControlMessage::VERSION_REQUEST).getData());
 
     common::Data versionBuffer(4, 0);
-    reinterpret_cast<uint16_t&>(versionBuffer[0]) = boost::endian::native_to_big(AASDK_MAJOR);
-    reinterpret_cast<uint16_t&>(versionBuffer[2]) = boost::endian::native_to_big(AASDK_MINOR);
+    // Discrimination hook for the AAP-version test (BUILD_NOTES §16):
+    // OPENAUTO_AAP_VERSION="major.minor" overrides the announced head-unit
+    // version. Unset or unparsable -> historical default (AASDK_MAJOR.MINOR).
+    uint16_t major = AASDK_MAJOR;
+    uint16_t minor = AASDK_MINOR;
+    if(const char* versionOverride = std::getenv("OPENAUTO_AAP_VERSION"))
+    {
+        unsigned parsedMajor = 0, parsedMinor = 0;
+        if(std::sscanf(versionOverride, "%u.%u", &parsedMajor, &parsedMinor) == 2 &&
+           parsedMajor <= 0xFFFF && parsedMinor <= 0xFFFF)
+        {
+            major = static_cast<uint16_t>(parsedMajor);
+            minor = static_cast<uint16_t>(parsedMinor);
+            AASDK_LOG(info) << "[ControlServiceChannel] AAP version override: " << major << "." << minor;
+        }
+        else
+        {
+            AASDK_LOG(warning) << "[ControlServiceChannel] ignoring malformed OPENAUTO_AAP_VERSION=\""
+                               << versionOverride << "\", using default.";
+        }
+    }
+    reinterpret_cast<uint16_t&>(versionBuffer[0]) = boost::endian::native_to_big(major);
+    reinterpret_cast<uint16_t&>(versionBuffer[2]) = boost::endian::native_to_big(minor);
     message->insertPayload(versionBuffer);
 
     this->send(std::move(message), std::move(promise));
