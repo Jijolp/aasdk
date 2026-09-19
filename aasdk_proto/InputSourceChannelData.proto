@@ -18,26 +18,20 @@
 
 syntax="proto3";
 
-import "SensorChannelData.proto";
-import "AVChannelData.proto";
-import "InputChannelData.proto";
-import "InputSourceChannelData.proto";
-import "AVInputChannelData.proto";
-import "BluetoothChannelData.proto";
-import "NavigationChannelData.proto";
-import "VendorExtensionChannelData.proto";
-
 package f1x.aasdk.proto.data;
 
-message ChannelDescriptor
+// Discovery declaration of the InputSource channel (AAP 1.6+).
+// Minimal shape: keycodes + touchscreens. Touchpads, feedback events and
+// display_id exist in the reference but are sent by nobody on the HU side,
+// so they are omitted (cf. R6 of the design doc).
+message InputSourceTouchScreen
 {
-    uint32 channel_id = 1;
-    SensorChannel sensor_channel = 2;
-    AVChannel av_channel = 3;
-    InputChannel input_channel = 4;
-    AVInputChannel av_input_channel = 5;
-    BluetoothChannel bluetooth_channel = 6;
-    NavigationChannel navigation_channel = 8;
-    InputSourceChannel input_source_channel = 9;
-    VendorExtensionChannel vendor_extension_channel = 12;
+    uint32 width = 1;
+    uint32 height = 2;
+}
+
+message InputSourceChannel
+{
+    repeated int32 keycodes_supported = 1;
+    repeated InputSourceTouchScreen touchscreen = 2;
 }

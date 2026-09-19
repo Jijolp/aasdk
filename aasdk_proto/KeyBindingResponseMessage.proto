@@ -18,26 +18,17 @@
 
 syntax="proto3";
 
-import "SensorChannelData.proto";
-import "AVChannelData.proto";
-import "InputChannelData.proto";
-import "InputSourceChannelData.proto";
-import "AVInputChannelData.proto";
-import "BluetoothChannelData.proto";
-import "NavigationChannelData.proto";
-import "VendorExtensionChannelData.proto";
+package f1x.aasdk.proto.messages;
 
-package f1x.aasdk.proto.data;
-
-message ChannelDescriptor
+// Status values mirror the shared MessageStatus table of the reference:
+// 0 = success, -18 = keycode not bound.
+enum KeyBindingStatus
 {
-    uint32 channel_id = 1;
-    SensorChannel sensor_channel = 2;
-    AVChannel av_channel = 3;
-    InputChannel input_channel = 4;
-    AVInputChannel av_input_channel = 5;
-    BluetoothChannel bluetooth_channel = 6;
-    NavigationChannel navigation_channel = 8;
-    InputSourceChannel input_source_channel = 9;
-    VendorExtensionChannel vendor_extension_channel = 12;
+    KEY_BINDING_SUCCESS = 0;
+    KEY_BINDING_KEYCODE_NOT_BOUND = -18;
+}
+
+message KeyBindingResponse
+{
+    int32 status = 1;
 }
