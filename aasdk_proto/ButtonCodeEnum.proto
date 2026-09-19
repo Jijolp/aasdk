@@ -36,6 +36,10 @@ message ButtonCode
         LEFT = 0x15;
         RIGHT = 0x16;
         ENTER = 0x17;
+        // Volume codes (AAP 1.6+ Android values): primarily used through
+        // the InputSource channel translation; also declarable on legacy.
+        VOLUME_UP = 24;
+        VOLUME_DOWN = 25;
         MICROPHONE_1 = 0x54;
         TOGGLE_PLAY = 0x55;
         NEXT = 0x57;
