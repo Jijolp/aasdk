@@ -18,35 +18,34 @@
 
 #pragma once
 
-#include <string>
+#include <memory>
+#include <f1x/aasdk/Error/Error.hpp>
+#include <aasdk_proto/KeyBindingRequestMessage.pb.h>
+#include <aasdk_proto/ChannelOpenRequestMessage.pb.h>
 
 namespace f1x
 {
 namespace aasdk
 {
-namespace messenger
+namespace channel
+{
+namespace inputsource
 {
 
-enum class ChannelId
+class IInputSourceChannelEventHandler
 {
-    CONTROL,
-    INPUT,
-    SENSOR,
-    VIDEO,
-    MEDIA_AUDIO,
-    SPEECH_AUDIO,
-    SYSTEM_AUDIO,
-    AV_INPUT,
-    BLUETOOTH,
-    // NOTE: the reference numbers INPUT_SOURCE as 8, but BLUETOOTH already
-    // occupies 8 here. Channel ids are declared by the HU in discovery, so
-    // appending (9) is protocol-correct (validated design Q2).
-    INPUT_SOURCE,
-    NONE = 255
+public:
+    typedef std::shared_ptr<IInputSourceChannelEventHandler> Pointer;
+
+    IInputSourceChannelEventHandler() = default;
+    virtual ~IInputSourceChannelEventHandler() = default;
+
+    virtual void onChannelOpenRequest(const proto::messages::ChannelOpenRequest& request) = 0;
+    virtual void onKeyBindingRequest(const proto::messages::KeyBindingRequest& request) = 0;
+    virtual void onChannelError(const error::Error& e) = 0;
 };
 
-std::string channelIdToString(ChannelId channelId);
-
+}
 }
 }
 }
