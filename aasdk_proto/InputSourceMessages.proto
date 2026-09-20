@@ -34,28 +34,33 @@ enum PointerAction
     ACTION_POINTER_UP = 6;
 }
 
+// S3: scalar fields are `optional` (explicit presence). The reference uses
+// proto2 with required/optional fields; plain proto3 would silently drop
+// meaningful zeroes (ACTION_DOWN=0, action_index=0, metastate=0,
+// longpress=false, coordinates 0) and a presence-strict phone parser would
+// see them as unset. protoc 36 fully supports proto3 optional.
 message Pointer
 {
-    uint32 x = 1;
-    uint32 y = 2;
-    uint32 pointer_id = 3;
+    optional uint32 x = 1;
+    optional uint32 y = 2;
+    optional uint32 pointer_id = 3;
 }
 
 message TouchEvent
 {
     repeated Pointer pointer_data = 1;
-    uint32 action_index = 2;
-    PointerAction action = 3;
+    optional uint32 action_index = 2;
+    optional PointerAction action = 3;
 }
 
 message KeyEvent
 {
     message Key
     {
-        uint32 keycode = 1;
-        bool down = 2;
-        uint32 metastate = 3;
-        bool longpress = 4;
+        optional uint32 keycode = 1;
+        optional bool down = 2;
+        optional uint32 metastate = 3;
+        optional bool longpress = 4;
     }
     repeated Key keys = 1;
 }
@@ -64,15 +69,15 @@ message RelativeEvent
 {
     message Rel
     {
-        uint32 keycode = 1;
-        int32 delta = 2;
+        optional uint32 keycode = 1;
+        optional int32 delta = 2;
     }
     repeated Rel data = 1;
 }
 
 message InputReport
 {
-    uint64 timestamp = 1;
+    optional uint64 timestamp = 1;
     TouchEvent touch_event = 3;
     KeyEvent key_event = 4;
     RelativeEvent relative_event = 6;

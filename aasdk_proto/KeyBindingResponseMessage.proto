@@ -30,5 +30,6 @@ enum KeyBindingStatus
 
 message KeyBindingResponse
 {
-    int32 status = 1;
+    // S3: optional for explicit presence (0 = SUCCESS must be on the wire).
+    optional int32 status = 1;
 }
