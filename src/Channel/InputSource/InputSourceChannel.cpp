@@ -16,6 +16,7 @@
 *  along with aasdk. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <cstdio>
 #include <aasdk_proto/InputSourceChannelMessageIdsEnum.pb.h>
 #include <aasdk_proto/ControlMessageIdsEnum.pb.h>
 #include <f1x/aasdk/Channel/InputSource/InputSourceChannel.hpp>
@@ -92,9 +93,21 @@ void InputSourceChannel::messageHandler(messenger::Message::Pointer message, IIn
         this->handleChannelOpenRequest(payload, std::move(eventHandler));
         break;
     default:
-        AASDK_LOG(error) << "[InputSourceChannel] message not handled: " << messageId.getId();
+    {
+        // S3 diagnostic: dump unhandled payloads (the phone sends 0x8001 at
+        // 1 Hz on this channel). Revisit/remove once decoded.
+        std::string hex;
+        char byte[4];
+        for(size_t i = 0; i < payload.size && i < 16; ++i)
+        {
+            std::snprintf(byte, sizeof(byte), "%02x", payload.cdata[i]);
+            hex += byte;
+        }
+        AASDK_LOG(error) << "[InputSourceChannel] message not handled: " << messageId.getId()
+                         << ", size: " << payload.size << ", head: " << hex;
         this->receive(std::move(eventHandler));
         break;
+    }
     }
 }
 
