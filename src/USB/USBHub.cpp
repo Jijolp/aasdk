@@ -16,6 +16,7 @@
 *  along with aasdk. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <memory>
 #include <thread>
 #include <f1x/aasdk/USB/IUSBWrapper.hpp>
 #include <f1x/aasdk/USB/USBHub.hpp>
@@ -79,6 +80,10 @@ int USBHub::hotplugEventsHandler(libusb_context* usbContext, libusb_device* devi
 {
     if(event == LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED)
     {
+        // The raw device pointer crosses into the asio strand below, where
+        // it may run after the device vanished (hot-unplug race, §10):
+        // hold a reference until handleDevice is done with it.
+        libusb_ref_device(device);
         auto self = reinterpret_cast<USBHub*>(userData)->shared_from_this();
         boost::asio::dispatch(self->strand_, std::bind(&USBHub::handleDevice, self, device));
     }
@@ -94,6 +99,9 @@ bool USBHub::isAOAPDevice(const libusb_device_descriptor& deviceDescriptor) cons
 
 void USBHub::handleDevice(libusb_device* device)
 {
+    // Balances the ref taken in hotplugEventsHandler on every path.
+    std::unique_ptr<libusb_device, decltype(&libusb_unref_device)> deviceGuard(device, &libusb_unref_device);
+
     if(hotplugPromise_ == nullptr)
     {
         return;
