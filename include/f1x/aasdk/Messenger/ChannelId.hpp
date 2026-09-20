@@ -37,11 +37,13 @@ enum class ChannelId
     SPEECH_AUDIO,
     SYSTEM_AUDIO,
     AV_INPUT,
-    BLUETOOTH,
-    // NOTE: the reference numbers INPUT_SOURCE as 8, but BLUETOOTH already
-    // occupies 8 here. Channel ids are declared by the HU in discovery, so
-    // appending (9) is protocol-correct (validated design Q2).
+    // S3 empirical result: the phone hardcodes channel 9 for media playback
+    // status (1 Hz ticks + metadata on id 9, undeclared in our discovery),
+    // so ids are NOT fully dynamic. The reference numbers INPUT_SOURCE as 8:
+    // declare it at 8 (plan B). BLUETOOTH is undeclared when Dummy, so its
+    // value is irrelevant.
     INPUT_SOURCE,
+    BLUETOOTH,
     NONE = 255
 };
 
