@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <map>
 #include <f1x/aasdk/Transport/ITransport.hpp>
 #include <boost/noncopyable.hpp>
 #include <f1x/aasdk/Messenger/IMessageInStream.hpp>
@@ -43,15 +44,31 @@ private:
     using std::enable_shared_from_this<MessageInStream>::shared_from_this;
 
     void receiveFrameHeaderHandler(const common::DataConstBuffer& buffer);
-    void receiveFrameSizeHandler(const common::DataConstBuffer& buffer);
-    void receiveFramePayloadHandler(const common::DataConstBuffer& buffer);
+    void receiveFrameSizeHandler(const common::DataConstBuffer& buffer, int channelId);
+    void receiveFramePayloadHandler(const common::DataConstBuffer& buffer, int channelId);
 
     boost::asio::io_context::strand strand_;
     transport::ITransport::Pointer transport_;
     ICryptor::Pointer cryptor_;
-    FrameType recentFrameType_;
     ReceivePromise::Pointer promise_;
-    Message::Pointer message_;
+
+    // Per-channel reassembly (§47): recent phones (AAP 1.7+) interleave
+    // frames of several channels on the wire (every frame carries its
+    // channel id precisely so the HU can demultiplex). The old code kept
+    // a single global partial message and killed the whole session with
+    // MESSENGER_INTERTWINED_CHANNELS as soon as a second channel spoke
+    // mid-message — fatal whenever the phone is used normally (music +
+    // notifications/sensors). Each channel now accumulates its own
+    // partial message + last frame type; completed messages resolve in
+    // arrival order through the single stream promise. All runs on the
+    // strand, strictly sequential: at most one transport receive is
+    // outstanding, so no races on this map.
+    struct PartialMessage
+    {
+        Message::Pointer message;
+        FrameType recentFrameType = FrameType::BULK;
+    };
+    std::map<int, PartialMessage> partials_;
 };
 
 }

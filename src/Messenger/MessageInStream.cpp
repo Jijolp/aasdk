@@ -63,29 +63,25 @@ void MessageInStream::startReceive(ReceivePromise::Pointer promise)
 void MessageInStream::receiveFrameHeaderHandler(const common::DataConstBuffer& buffer)
 {
     FrameHeader frameHeader(buffer);
+    const int channelId = static_cast<int>(frameHeader.getChannelId());
 
-    if(message_ == nullptr)
+    auto& partial = partials_[channelId];
+    if(partial.message == nullptr || frameHeader.getType() == FrameType::FIRST)
     {
-        message_ = std::make_shared<Message>(frameHeader.getChannelId(), frameHeader.getEncryptionType(), frameHeader.getMessageType());
+        // New message (or a stale partial abandoned by the phone gets
+        // restarted by a fresh FIRST frame instead of leaking).
+        partial.message = std::make_shared<Message>(frameHeader.getChannelId(), frameHeader.getEncryptionType(), frameHeader.getMessageType());
     }
-    else if(message_->getChannelId() != frameHeader.getChannelId())
-    {
-        message_.reset();
-        promise_->reject(error::Error(error::ErrorCode::MESSENGER_INTERTWINED_CHANNELS));
-        promise_.reset();
-        return;
-    }
-
-    recentFrameType_ = frameHeader.getType();
+    partial.recentFrameType = frameHeader.getType();
     const size_t frameSize = FrameSize::getSizeOf(frameHeader.getType() == FrameType::FIRST ? FrameSizeType::EXTENDED : FrameSizeType::SHORT);
 
     auto transportPromise = transport::ITransport::ReceivePromise::defer(strand_);
     transportPromise->then(
-        [this, self = this->shared_from_this()](common::Data data) mutable {
-            this->receiveFrameSizeHandler(common::DataConstBuffer(data));
+        [this, self = this->shared_from_this(), channelId](common::Data data) mutable {
+            this->receiveFrameSizeHandler(common::DataConstBuffer(data), channelId);
         },
         [this, self = this->shared_from_this()](const error::Error& e) mutable {
-            message_.reset();
+            partials_.clear();
             promise_->reject(e);
             promise_.reset();
         });
@@ -93,15 +89,15 @@ void MessageInStream::receiveFrameHeaderHandler(const common::DataConstBuffer& b
     transport_->receive(frameSize, std::move(transportPromise));
 }
 
-void MessageInStream::receiveFrameSizeHandler(const common::DataConstBuffer& buffer)
+void MessageInStream::receiveFrameSizeHandler(const common::DataConstBuffer& buffer, int channelId)
 {
     auto transportPromise = transport::ITransport::ReceivePromise::defer(strand_);
     transportPromise->then(
-        [this, self = this->shared_from_this()](common::Data data) mutable {
-            this->receiveFramePayloadHandler(common::DataConstBuffer(data));
+        [this, self = this->shared_from_this(), channelId](common::Data data) mutable {
+            this->receiveFramePayloadHandler(common::DataConstBuffer(data), channelId);
         },
         [this, self = this->shared_from_this()](const error::Error& e) mutable {
-            message_.reset();
+            partials_.clear();
             promise_->reject(e);
             promise_.reset();
         });
@@ -110,17 +106,30 @@ void MessageInStream::receiveFrameSizeHandler(const common::DataConstBuffer& buf
     transport_->receive(frameSize.getSize(), std::move(transportPromise));
 }
 
-void MessageInStream::receiveFramePayloadHandler(const common::DataConstBuffer& buffer)
-{   
-    if(message_->getEncryptionType() == EncryptionType::ENCRYPTED)
+void MessageInStream::receiveFramePayloadHandler(const common::DataConstBuffer& buffer, int channelId)
+{
+    auto it = partials_.find(channelId);
+    if(it == partials_.end() || it->second.message == nullptr)
+    {
+        // Cannot happen: the header handler always installs the partial
+        // before any size/payload receive is issued (strand-sequential).
+        // Defensive: fail this receive instead of hanging it.
+        partials_.clear();
+        promise_->reject(error::Error(error::ErrorCode::PARSE_PAYLOAD));
+        promise_.reset();
+        return;
+    }
+    Message::Pointer& message = it->second.message;
+
+    if(message->getEncryptionType() == EncryptionType::ENCRYPTED)
     {
         try
         {
-            cryptor_->decrypt(message_->getPayload(), buffer);
+            cryptor_->decrypt(message->getPayload(), buffer);
         }
         catch(const error::Error& e)
         {
-            message_.reset();
+            partials_.erase(it);
             promise_->reject(e);
             promise_.reset();
             return;
@@ -128,12 +137,13 @@ void MessageInStream::receiveFramePayloadHandler(const common::DataConstBuffer& 
     }
     else
     {
-        message_->insertPayload(buffer);
+        message->insertPayload(buffer);
     }
 
-    if(recentFrameType_ == FrameType::BULK || recentFrameType_ == FrameType::LAST)
+    if(it->second.recentFrameType == FrameType::BULK || it->second.recentFrameType == FrameType::LAST)
     {
-        promise_->resolve(std::move(message_));
+        promise_->resolve(std::move(message));
+        partials_.erase(it);
         promise_.reset();
     }
     else
@@ -144,7 +154,7 @@ void MessageInStream::receiveFramePayloadHandler(const common::DataConstBuffer& 
                 this->receiveFrameHeaderHandler(common::DataConstBuffer(data));
             },
             [this, self = this->shared_from_this()](const error::Error& e) mutable {
-                message_.reset();
+                partials_.clear();
                 promise_->reject(e);
                 promise_.reset();
             });

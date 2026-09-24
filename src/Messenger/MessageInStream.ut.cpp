@@ -350,24 +350,32 @@ BOOST_FIXTURE_TEST_CASE(MessageInStream_ReceiveSplittedMessage, MessageInStreamU
     BOOST_CHECK_EQUAL_COLLECTIONS(payload.begin(), payload.end(), expectedPayload.begin(), expectedPayload.end());
 }
 
-BOOST_FIXTURE_TEST_CASE(MessageInStream_IntertwinedChannels, MessageInStreamUnitTest)
+BOOST_FIXTURE_TEST_CASE(MessageInStream_InterleavedChannelsResolve, MessageInStreamUnitTest)
 {
+    // §47: recent phones (AAP 1.7+) interleave channels on the wire. A
+    // BLUETOOTH FIRST frame interrupted by a complete VIDEO message must
+    // NOT kill the stream: VIDEO resolves at once, BLUETOOTH completes
+    // on the next receive with its full payload intact.
+    // NOTE: header receives and SHORT size receives are both 2 bytes, so
+    // every transport EXPECT is declared WillOnce immediately before the
+    // resolve that triggers it — at most one receive(2) expectation is
+    // ever active, no gmock matching ambiguity.
     MessageInStream::Pointer messageInStream(std::make_shared<MessageInStream>(ioService_, transport_, cryptor_));
-    FrameHeader frame1Header(ChannelId::BLUETOOTH, FrameType::FIRST, EncryptionType::PLAIN, MessageType::SPECIFIC);
+
+    common::Data frame1Payload(1000, 0x5E);
+    common::Data frame2Payload(2000, 0x5F);
+    common::Data videoPayload(500, 0x5A);
 
     transport::ITransport::ReceivePromise::Pointer frameHeaderTransportPromise;
-    EXPECT_CALL(transportMock_, receive(FrameHeader::getSizeOf(), _)).Times(2).WillRepeatedly(SaveArg<1>(&frameHeaderTransportPromise));
-
+    EXPECT_CALL(transportMock_, receive(FrameHeader::getSizeOf(), _)).WillOnce(SaveArg<1>(&frameHeaderTransportPromise));
     messageInStream->startReceive(std::move(receivePromise_));
 
     ioService_.run();
     ioService_.reset();
 
-    common::Data frame1Payload(1000, 0x5E);
-    common::Data frame2Payload(2000, 0x5F);
-
     transport::ITransport::ReceivePromise::Pointer frame1SizeTransportPromise;
     EXPECT_CALL(transportMock_, receive(FrameSize::getSizeOf(FrameSizeType::EXTENDED), _)).WillOnce(SaveArg<1>(&frame1SizeTransportPromise));
+    FrameHeader frame1Header(ChannelId::BLUETOOTH, FrameType::FIRST, EncryptionType::PLAIN, MessageType::SPECIFIC);
     frameHeaderTransportPromise->resolve(frame1Header.getData());
 
     ioService_.run();
@@ -381,18 +389,87 @@ BOOST_FIXTURE_TEST_CASE(MessageInStream_IntertwinedChannels, MessageInStreamUnit
     ioService_.run();
     ioService_.reset();
 
+    // Next header receive armed BEFORE resolving the payload that
+    // triggers it, so it is the only active receive(2) expectation.
+    EXPECT_CALL(transportMock_, receive(FrameHeader::getSizeOf(), _)).WillOnce(SaveArg<1>(&frameHeaderTransportPromise));
     frame1PayloadTransportPromise->resolve(frame1Payload);
 
     ioService_.run();
     ioService_.reset();
 
-    FrameHeader frame2Header(ChannelId::VIDEO, FrameType::LAST, EncryptionType::PLAIN, MessageType::SPECIFIC);
+    // Interrupting VIDEO single-frame message resolves immediately —
+    // no reject, stream stays alive, BLUETOOTH partial survives.
+    FrameHeader videoHeader(ChannelId::VIDEO, FrameType::LAST, EncryptionType::PLAIN, MessageType::SPECIFIC);
 
-    EXPECT_CALL(receivePromiseHandlerMock_, onReject(error::Error(error::ErrorCode::MESSENGER_INTERTWINED_CHANNELS)));
-    EXPECT_CALL(receivePromiseHandlerMock_, onResolve(_)).Times(0);
+    transport::ITransport::ReceivePromise::Pointer videoSizeTransportPromise;
+    EXPECT_CALL(transportMock_, receive(FrameSize::getSizeOf(FrameSizeType::SHORT), _)).WillOnce(SaveArg<1>(&videoSizeTransportPromise));
+    frameHeaderTransportPromise->resolve(videoHeader.getData());
+
+    ioService_.run();
+    ioService_.reset();
+
+    transport::ITransport::ReceivePromise::Pointer videoPayloadTransportPromise;
+    EXPECT_CALL(transportMock_, receive(videoPayload.size(), _)).WillOnce(SaveArg<1>(&videoPayloadTransportPromise));
+    FrameSize videoSize(videoPayload.size());
+    videoSizeTransportPromise->resolve(videoSize.getData());
+
+    ioService_.run();
+    ioService_.reset();
+
+    Message::Pointer videoMessage;
+    EXPECT_CALL(receivePromiseHandlerMock_, onReject(_)).Times(0);
+    EXPECT_CALL(receivePromiseHandlerMock_, onResolve(_)).WillOnce(SaveArg<0>(&videoMessage));
+    videoPayloadTransportPromise->resolve(videoPayload);
+
+    ioService_.run();
+    ioService_.reset();
+
+    BOOST_CHECK(videoMessage->getChannelId() == ChannelId::VIDEO);
+    const auto& videoBytes = videoMessage->getPayload();
+    BOOST_CHECK_EQUAL_COLLECTIONS(videoBytes.begin(), videoBytes.end(), videoPayload.begin(), videoPayload.end());
+
+    // BLUETOOTH partial survived the interruption: complete it on a
+    // fresh receive with the full concatenated payload.
+    ReceivePromiseHandlerMock secondReceivePromiseHandlerMock;
+    auto secondReceivePromise = ReceivePromise::defer(ioService_);
+    secondReceivePromise->then(std::bind(&ReceivePromiseHandlerMock::onResolve, &secondReceivePromiseHandlerMock, std::placeholders::_1),
+                               std::bind(&ReceivePromiseHandlerMock::onReject, &secondReceivePromiseHandlerMock, std::placeholders::_1));
+    EXPECT_CALL(transportMock_, receive(FrameHeader::getSizeOf(), _)).WillOnce(SaveArg<1>(&frameHeaderTransportPromise));
+    messageInStream->startReceive(std::move(secondReceivePromise));
+
+    ioService_.run();
+    ioService_.reset();
+
+    FrameHeader frame2Header(ChannelId::BLUETOOTH, FrameType::LAST, EncryptionType::PLAIN, MessageType::SPECIFIC);
+
+    transport::ITransport::ReceivePromise::Pointer frame2SizeTransportPromise;
+    EXPECT_CALL(transportMock_, receive(FrameSize::getSizeOf(FrameSizeType::SHORT), _)).WillOnce(SaveArg<1>(&frame2SizeTransportPromise));
     frameHeaderTransportPromise->resolve(frame2Header.getData());
 
     ioService_.run();
+    ioService_.reset();
+
+    transport::ITransport::ReceivePromise::Pointer frame2PayloadTransportPromise;
+    EXPECT_CALL(transportMock_, receive(frame2Payload.size(), _)).WillOnce(SaveArg<1>(&frame2PayloadTransportPromise));
+    FrameSize frame2Size(frame2Payload.size());
+    frame2SizeTransportPromise->resolve(frame2Size.getData());
+
+    ioService_.run();
+    ioService_.reset();
+
+    common::Data expectedPayload(frame1Payload.begin(), frame1Payload.end());
+    expectedPayload.insert(expectedPayload.end(), frame2Payload.begin(), frame2Payload.end());
+
+    Message::Pointer message;
+    EXPECT_CALL(secondReceivePromiseHandlerMock, onReject(_)).Times(0);
+    EXPECT_CALL(secondReceivePromiseHandlerMock, onResolve(_)).WillOnce(SaveArg<0>(&message));
+    frame2PayloadTransportPromise->resolve(frame2Payload);
+
+    ioService_.run();
+
+    BOOST_CHECK(message->getChannelId() == ChannelId::BLUETOOTH);
+    const auto& payload = message->getPayload();
+    BOOST_CHECK_EQUAL_COLLECTIONS(payload.begin(), payload.end(), expectedPayload.begin(), expectedPayload.end());
 }
 
 BOOST_FIXTURE_TEST_CASE(MessageInStream_RejectWhenInProgress, MessageInStreamUnitTest)
